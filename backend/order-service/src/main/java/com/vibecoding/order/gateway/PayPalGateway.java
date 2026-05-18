@@ -12,12 +12,17 @@ import java.util.UUID;
 public class PayPalGateway implements PaymentGateway {
 
     @Override
+    public String getChannel() {
+        return "paypal";
+    }
+
+    @Override
     public String getName() {
         return "PayPal";
     }
 
     @Override
-    public String createPayment(Long orderId, String orderNo, BigDecimal amount, String currency) {
+    public String createPayment(Long orderId, String orderNo, BigDecimal amount, String currency, String returnUrl) {
         String paymentId = "PP-" + UUID.randomUUID().toString().substring(0, 8);
         log.info("Created PayPal payment: {} for order: {}", paymentId, orderNo);
         return paymentId;
@@ -30,7 +35,7 @@ public class PayPalGateway implements PaymentGateway {
     }
 
     @Override
-    public boolean verifyCallback(Map<String, String> params) {
+    public boolean verifyCallback(Map<String, Object> params) {
         return true;
     }
 }
