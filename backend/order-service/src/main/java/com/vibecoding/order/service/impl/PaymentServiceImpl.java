@@ -72,7 +72,7 @@ public class PaymentServiceImpl implements PaymentService {
         paymentMapper.insert(payment);
 
         // 调用支付网关创建支付
-        Map<String, Object> gatewayPayment = gateway.createPayment(
+        String gatewayPaymentId = gateway.createPayment(
                 orderId,
                 order.getOrderNo(),
                 order.getTotalAmount(),
@@ -80,14 +80,12 @@ public class PaymentServiceImpl implements PaymentService {
                 returnUrl
         );
 
-        // 更新支付记录
-        payment.setChannelOrderNo((String) gatewayPayment.get("paymentNo"));
-        payment.setPayUrl((String) gatewayPayment.get("payUrl"));
+        payment.setChannelOrderNo(gatewayPaymentId);
         paymentMapper.updateById(payment);
 
         Map<String, Object> result = new HashMap<>();
         result.put("paymentNo", paymentNo);
-        result.put("payUrl", gatewayPayment.get("payUrl"));
+        result.put("payUrl", returnUrl + "?paymentNo=" + gatewayPaymentId);
         result.put("amount", order.getTotalAmount());
 
         return result;
