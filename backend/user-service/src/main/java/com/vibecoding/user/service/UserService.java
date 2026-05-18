@@ -1,13 +1,19 @@
 package com.vibecoding.user.service;
 
-import com.vibecoding.common.base.BaseService;
 import com.vibecoding.user.entity.User;
 import com.vibecoding.user.entity.UserAddress;
-import com.vibecoding.user.mapper.UserMapper;
 
 import java.util.List;
 
-public interface UserService extends BaseService<UserMapper, User> {
+public interface UserService {
+
+    User getById(Long id);
+
+    boolean save(User user);
+
+    boolean updateById(User user);
+
+    boolean removeById(Long id);
 
     List<UserAddress> listAddresses(Long userId);
 
