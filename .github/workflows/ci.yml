@@ -1,0 +1,110 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [dev, test, staging, main]
+  pull_request:
+    branches: [dev, test, staging, main]
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  # 构建后端
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: |
+          cd backend
+          chmod +x mvnw
+          ./mvnw clean install -DskipTests
+        shell: bash
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifacts
+          path: backend/*/target/*.jar
+
+      - name: Set build status
+        if: success()
+        run: echo "build=success" >> $GITHUB_OUTPUT
+
+  # 构建前端
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/nuxt3/package-lock.json
+            frontend/vue-admin/package-lock.json
+
+      - name: Build Nuxt3 Storefront
+        run: |
+          cd frontend/nuxt3
+          npm ci || npm install
+          npm run build
+        shell: bash
+
+      - name: Build Vue3 Admin
+        run: |
+          cd frontend/vue-admin
+          npm ci || npm install
+          npm run build
+        shell: bash
+
+  # 测试并提 Issue
+  test-and-report:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/test')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Run tests
+        run: |
+          cd backend
+          chmod +x mvnw
+          ./mvnw test
+        shell: bash
+
+      - name: Get test results
+        if: failure()
+        run: |
+          find . -path '*/target/surefire-reports/*.xml' -exec cat {} \; | grep -E '<testcase|<failure' > test-report.txt || echo "No test failures found" > test-report.txt
+
+      - name: Create GitHub Issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('test-report.txt') ? fs.readFileSync('test-report.txt', 'utf8') : 'No details available';
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[自动] 测试失败 - ${new Date().toLocaleDateString()}`,
+              body: `## 测试失败报告\n\n**分支**: ${context.ref}\n**提交**: ${context.sha}\n\n### 失败详情\n\`\`\`\n${report}\n\`\`\`\n\nplease fix this issue.`,
+              labels: ['bug', 'auto-test']
+            })

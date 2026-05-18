@@ -1,0 +1,15 @@
+com/vibecoding/product/mapper/CategoryMapper.class
+com/vibecoding/product/controller/ProductController.class
+com/vibecoding/product/ProductServiceApplication.class
+com/vibecoding/product/mapper/ProductMapper.class
+com/vibecoding/product/service/ProductService.class
+com/vibecoding/product/mapper/BrandMapper.class
+com/vibecoding/product/entity/Product.class
+com/vibecoding/product/service/impl/ProductServiceImpl.class
+com/vibecoding/product/controller/CategoryController.class
+com/vibecoding/product/service/CategoryService.class
+com/vibecoding/product/entity/Brand.class
+com/vibecoding/product/entity/Category.class
+com/vibecoding/product/service/impl/CategoryServiceImpl.class
+com/vibecoding/product/entity/ProductSku.class
+com/vibecoding/product/mapper/ProductSkuMapper.class

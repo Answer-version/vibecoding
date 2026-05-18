@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: vibecoding-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: ecommerce
+      MYSQL_USER: vibe
+      MYSQL_PASSWORD: vibe123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vibe-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vibecoding-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vibe-network
+
+  # Nacos (Service Registry)
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: vibecoding-nacos
+    restart: always
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    networks:
+      - vibe-network
+    volumes:
+      - nacos-logs:/home/nacos/logs
+
+  # API Gateway
+  gateway:
+    image: vibecoding/gateway:latest
+    container_name: vibecoding-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER=127.0.0.1:8848
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=vibe
+      - DB_PASSWORD=vibe123
+      - REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET:-vibecoding-secret-key-256-bits-required}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nacos:
+        condition: service_started
+    networks:
+      - vibe-network
+
+  # Product Service
+  product-service:
+    image: vibecoding/product-service:latest
+    container_name: vibecoding-product
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=vibe
+      - DB_PASSWORD=vibe123
+      - REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vibe-network
+
+  # User Service
+  user-service:
+    image: vibecoding/user-service:latest
+    container_name: vibecoding-user
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=vibe
+      - DB_PASSWORD=vibe123
+      - REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vibe-network
+
+  # Order Service
+  order-service:
+    image: vibecoding/order-service:latest
+    container_name: vibecoding-order
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=vibe
+      - DB_PASSWORD=vibe123
+      - REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vibe-network
+
+  # CMS Service
+  cms-service:
+    image: vibecoding/cms-service:latest
+    container_name: vibecoding-cms
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=vibe
+      - DB_PASSWORD=vibe123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vibe-network
+
+  # Nginx (Reverse Proxy + Static)
+  nginx:
+    image: nginx:alpine
+    container_name: vibecoding-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/usr/share/nginx/html:ro
+    depends_on:
+      - gateway
+    networks:
+      - vibe-network
+
+volumes:
+  mysql-data:
+  redis-data:
+  nacos-logs:
+
+networks:
+  vibe-network:
+    driver: bridge
