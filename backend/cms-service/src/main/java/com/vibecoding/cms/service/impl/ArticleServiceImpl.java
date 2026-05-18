@@ -14,10 +14,19 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ArticleServiceImpl extends ServiceImpl<CmsArticleMapper, CmsArticle> implements ArticleService {
+
+    @Override
+    public List<CmsArticle> list() {
+        return list(new LambdaQueryWrapper<CmsArticle>()
+                .eq(CmsArticle::getDeleted, 0)
+                .eq(CmsArticle::getStatus, 1)
+                .orderByDesc(CmsArticle::getSortOrder));
+    }
 
     @Override
     @Cacheable(value = "cms:articles", key = "#pageNum + ':' + #pageSize")
@@ -53,27 +62,26 @@ public class ArticleServiceImpl extends ServiceImpl<CmsArticleMapper, CmsArticle
 
     @Override
     @CacheEvict(value = {"cms:articles", "cms:article", "cms:article:slug"}, allEntries = true)
-    public CmsArticle save(CmsArticle article) {
+    public boolean save(CmsArticle article) {
         if (article.getId() == null) {
             article.setCreateTime(LocalDateTime.now());
             article.setViewCount(0);
         }
         article.setUpdateTime(LocalDateTime.now());
-        saveOrUpdate(article);
-        return article;
+        return saveOrUpdate(article);
     }
 
     @Override
     @CacheEvict(value = {"cms:articles", "cms:article", "cms:article:slug"}, allEntries = true)
-    public void update(CmsArticle article) {
+    public boolean update(CmsArticle article) {
         article.setUpdateTime(LocalDateTime.now());
-        updateById(article);
+        return updateById(article);
     }
 
     @Override
     @CacheEvict(value = {"cms:articles", "cms:article", "cms:article:slug"}, allEntries = true)
-    public void delete(Long id) {
-        removeById(id);
+    public boolean delete(Long id) {
+        return removeById(id);
     }
 
     @Override

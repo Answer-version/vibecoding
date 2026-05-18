@@ -2,7 +2,6 @@ package com.vibecoding.user.controller;
 
 import com.vibecoding.common.exception.BusinessException;
 import com.vibecoding.common.result.R;
-import com.vibecoding.user.entity.User;
 import com.vibecoding.user.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +29,7 @@ public class AuthController {
     public R<Map<String, Object>> login(@RequestBody Map<String, String> params) {
         String loginName = params.get("username");
         String password = params.get("password");
-        String loginType = params.get("loginType", "password");
+        String loginType = params.getOrDefault("loginType", "password");
 
         if (!"password".equals(loginType)) {
             throw new BusinessException("Unsupported login type");

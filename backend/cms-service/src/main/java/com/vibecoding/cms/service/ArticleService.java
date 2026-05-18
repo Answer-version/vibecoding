@@ -7,17 +7,19 @@ import java.util.List;
 
 public interface ArticleService {
 
+    List<CmsArticle> list();
+
     PageResult<CmsArticle> pageList(int pageNum, int pageSize, Long categoryId);
 
     CmsArticle getById(Long id);
 
     CmsArticle getBySlug(String slug);
 
-    CmsArticle save(CmsArticle article);
+    boolean save(CmsArticle article);
 
-    void update(CmsArticle article);
+    boolean update(CmsArticle article);
 
-    void delete(Long id);
+    boolean delete(Long id);
 
     void incrementView(Long id);
 }
