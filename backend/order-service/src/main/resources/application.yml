@@ -1,26 +1,33 @@
 server:
-  port: 8083
+  port: 8082
 
 spring:
   application:
     name: order-service
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:vibecoding;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
-        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/ecommerce?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:}
+        enabled: false
 
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       logic-delete-field: deleted
-
-jwt:
-  secret: ${JWT_SECRET:vibecoding-secret-key-must-be-at-least-256-bits}
-  expire-hours: ${JWT_EXPIRE:24}
+      logic-delete-value: 1
+      logic-not-delete-value: 0

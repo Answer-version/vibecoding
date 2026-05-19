@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("user")
+@TableName("users")
 public class User {
 
     @TableId(type = IdType.AUTO)

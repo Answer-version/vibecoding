@@ -21,9 +21,19 @@ public class Product {
     private String descriptionEn;
     private String keywords;
     private BigDecimal weight;
+    @TableField("length_val")
     private BigDecimal length;
+    @TableField("width_val")
     private BigDecimal width;
+    @TableField("height_val")
     private BigDecimal height;
+    private BigDecimal price;
+    @TableField("original_price")
+    private BigDecimal originalPrice;
+    @TableField("cost_price")
+    private BigDecimal costPrice;
+    @TableField("stock_quantity")
+    private Integer stockQuantity;
 
     @TableField("is_featured")
     private Integer isFeatured;
@@ -37,8 +47,10 @@ public class Product {
     private String seoKeywords;
     private String seoDescription;
     private Integer viewCount;
+    @TableField("sales_count")
     private Integer saleCount;
     private Integer reviewCount;
+    @TableField("avg_score")
     private BigDecimal avgScore;
     private Integer sortOrder;
     private Integer status;
@@ -97,6 +109,18 @@ public class Product {
 
     public BigDecimal getHeight() { return height; }
     public void setHeight(BigDecimal height) { this.height = height; }
+
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+
+    public BigDecimal getOriginalPrice() { return originalPrice; }
+    public void setOriginalPrice(BigDecimal originalPrice) { this.originalPrice = originalPrice; }
+
+    public BigDecimal getCostPrice() { return costPrice; }
+    public void setCostPrice(BigDecimal costPrice) { this.costPrice = costPrice; }
+
+    public Integer getStockQuantity() { return stockQuantity; }
+    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
 
     public Integer getIsFeatured() { return isFeatured; }
     public void setIsFeatured(Integer isFeatured) { this.isFeatured = isFeatured; }
