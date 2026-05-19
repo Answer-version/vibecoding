@@ -1,6 +1,8 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
+  srcDir: 'app',
+
   modules: ['@pinia/nuxt', '@vueuse/nuxt'],
 
   app: {
@@ -20,7 +22,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080/api/v1'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8081/api/v1'
     }
   },
 

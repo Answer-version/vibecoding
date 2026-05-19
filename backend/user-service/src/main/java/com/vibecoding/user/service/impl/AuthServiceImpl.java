@@ -4,7 +4,6 @@ import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vibecoding.common.exception.BusinessException;
 import com.vibecoding.common.security.JwtUtils;
-import com.vibecoding.user.entity.CustomerGroup;
 import com.vibecoding.user.entity.User;
 import com.vibecoding.user.mapper.UserMapper;
 import com.vibecoding.user.service.AuthService;
@@ -28,7 +27,7 @@ public class AuthServiceImpl implements AuthService {
         long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, username)
                 .or()
-                .eq(User::getEmail, email)) ;
+                .eq(User::getEmail, email));
 
         if (count > 0) {
             throw new BusinessException("Username or email already exists");
@@ -114,5 +113,90 @@ public class AuthServiceImpl implements AuthService {
         result.put("token", newToken);
 
         return result;
+    }
+
+    @Override
+    public Map<String, Object> phoneLogin(String phone) {
+        // 查询用户
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone));
+
+        if (user == null) {
+            throw new BusinessException("User not found, please register first");
+        }
+
+        if (user.getStatus() == 0) {
+            throw new BusinessException("Account is disabled");
+        }
+
+        // 更新登录信息
+        user.setLastLoginTime(LocalDateTime.now());
+        user.setLoginCount(user.getLoginCount() + 1);
+        userMapper.updateById(user);
+
+        // 生成 Token
+        String token = jwtUtils.generateToken(user.getId(), "USER", null);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("nickname", user.getNickname());
+        result.put("userType", user.getUserType());
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> phoneRegister(String phone, String password) {
+        // 检查手机号是否已注册
+        User existingUser = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone));
+
+        if (existingUser != null) {
+            throw new BusinessException("Phone number already registered");
+        }
+
+        // 生成用户名
+        String username = "user_" + phone.substring(phone.length() - 4);
+
+        // 创建用户
+        User user = new User();
+        user.setUsername(username);
+        user.setPhone(phone);
+        user.setPassword(BCrypt.hashpw(password));
+        user.setUserType(1);
+        user.setStatus(1);
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+
+        userMapper.insert(user);
+
+        // 生成 Token
+        String token = jwtUtils.generateToken(user.getId(), "USER", null);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userId", user.getId());
+        result.put("username", username);
+
+        return result;
+    }
+
+    @Override
+    public void resetPassword(String phone, String newPassword) {
+        // 查询用户
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, phone));
+
+        if (user == null) {
+            throw new BusinessException("User not found");
+        }
+
+        // 更新密码
+        user.setPassword(BCrypt.hashpw(newPassword));
+        user.setUpdateTime(LocalDateTime.now());
+        userMapper.updateById(user);
     }
 }

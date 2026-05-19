@@ -1,13 +1,13 @@
 <template>
   <div class="products-page container">
     <div class="header">
-      <h1>Products</h1>
+      <h1>{{ t('products') }}</h1>
       <div class="filters">
         <select v-model="categoryId">
-          <option :value="null">All Categories</option>
+          <option :value="null">{{ t('allCategories') }}</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
-        <input v-model="keyword" placeholder="Search products..." @keyup.enter="search">
+        <input v-model="keyword" :placeholder="t('search')" @keyup.enter="search">
       </div>
     </div>
 
@@ -15,7 +15,7 @@
       <div v-for="p in products" :key="p.id" class="product-card">
         <NuxtLink :to="`/products/${p.id}`">
           <div class="product-image">
-            <img :src="p.image" :alt="p.name">
+            <img :src="getProductImage(p)" :alt="p.name">
           </div>
           <div class="product-info">
             <h3>{{ p.name }}</h3>
@@ -30,6 +30,9 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+const { getProductImage } = useProductImage()
+
 interface Product {
   id: number
   name: string

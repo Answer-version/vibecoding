@@ -2,19 +2,19 @@
   <div class="home">
     <section class="hero">
       <div class="container">
-        <h1>Welcome to VibeCommerce</h1>
-        <p>Your trusted partner for cross-border e-commerce</p>
-        <NuxtLink to="/products" class="btn">Shop Now</NuxtLink>
+        <h1>{{ t('welcome') }}</h1>
+        <p>{{ t('subtitle') }}</p>
+        <NuxtLink to="/products" class="btn">{{ t('shopNow') }}</NuxtLink>
       </div>
     </section>
 
     <section class="featured container">
-      <h2>Featured Products</h2>
+      <h2>{{ t('featured') }}</h2>
       <div class="product-grid">
-        <div v-for="product in products" :key="product.id" class="product-card">
+        <div v-for="product in productsList" :key="product.id" class="product-card">
           <NuxtLink :to="`/products/${product.id}`">
             <div class="product-image">
-              <img :src="product.image" :alt="product.name">
+              <img :src="getProductImage(product)" :alt="product.name">
             </div>
             <div class="product-info">
               <h3>{{ product.name }}</h3>
@@ -28,6 +28,9 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+const { getProductImage } = useProductImage()
+
 interface Product {
   id: number
   name: string
@@ -36,9 +39,16 @@ interface Product {
 }
 
 const config = useRuntimeConfig()
-const { data: products } = await useFetch<Product[]>('/products', {
-  baseURL: config.public.apiBase,
-  default: () => []
+
+const { data: response } = await useFetch<{ code: number, data: { records: Product[] } }>('/products', {
+  baseURL: config.public.apiBase
+})
+
+const productsList = computed(() => {
+  if (response.value?.data?.records) {
+    return response.value.data.records
+  }
+  return []
 })
 </script>
 

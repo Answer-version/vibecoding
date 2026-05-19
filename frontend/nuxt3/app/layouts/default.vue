@@ -5,16 +5,21 @@
         <div class="header-content">
           <NuxtLink to="/" class="logo">VibeCommerce</NuxtLink>
           <nav class="nav">
-            <NuxtLink to="/">Home</NuxtLink>
-            <NuxtLink to="/products">Products</NuxtLink>
-            <NuxtLink to="/about">About</NuxtLink>
+            <NuxtLink to="/">{{ t('home') }}</NuxtLink>
+            <NuxtLink to="/products">{{ t('products') }}</NuxtLink>
           </nav>
           <div class="header-right">
-            <select v-model="locale" @change="changeLocale">
+            <select v-model="currentLocale" @change="changeLocale">
               <option value="en">EN</option>
               <option value="zh">中文</option>
             </select>
             <NuxtLink to="/cart" class="cart-icon">🛒</NuxtLink>
+            <template v-if="isLoggedIn">
+              <NuxtLink to="/profile" class="user-link">👤 {{ t('home') }}</NuxtLink>
+            </template>
+            <template v-else>
+              <NuxtLink to="/auth/login" class="login-link">{{ t('login') }}</NuxtLink>
+            </template>
           </div>
         </div>
       </div>
@@ -31,10 +36,14 @@
 </template>
 
 <script setup lang="ts">
-const locale = useCookie('locale', { default: () => 'en' })
+const { locale, t, setLocale } = useI18n()
+const token = useCookie('token')
+const isLoggedIn = computed(() => !!token.value)
+
+const currentLocale = ref(locale.value)
 
 function changeLocale() {
-  useCookie('locale').value = locale.value
+  setLocale(currentLocale.value)
 }
 </script>
 
@@ -82,8 +91,25 @@ function changeLocale() {
   align-items: center;
   gap: 20px;
 }
+.header-right select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
 .cart-icon {
   font-size: 20px;
+  text-decoration: none;
+}
+.login-link {
+  color: #007bff;
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+}
+.user-link {
+  color: #666;
   text-decoration: none;
 }
 .main {
