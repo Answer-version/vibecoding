@@ -1,20 +1,44 @@
 <template>
   <div class="home">
+    <!-- Hero Section -->
     <section class="hero">
       <div class="container">
-        <h1>Welcome to VibeCommerce</h1>
-        <p>Your trusted partner for cross-border e-commerce</p>
-        <NuxtLink to="/products" class="btn">Shop Now</NuxtLink>
+        <h1>{{ t('welcome') }}</h1>
+        <p>{{ t('subtitle') }}</p>
+        <NuxtLink to="/products" class="btn">{{ t('shopNow') }}</NuxtLink>
       </div>
     </section>
 
+    <!-- Quick Links -->
+    <section class="quick-links container">
+      <div class="links-grid">
+        <NuxtLink to="/products" class="link-card">
+          <span class="icon">🛍️</span>
+          <span class="text">{{ t('products') }}</span>
+        </NuxtLink>
+        <NuxtLink to="/cart" class="link-card">
+          <span class="icon">🛒</span>
+          <span class="text">{{ t('cart') }}</span>
+        </NuxtLink>
+        <NuxtLink to="/about" class="link-card">
+          <span class="icon">ℹ️</span>
+          <span class="text">{{ t('about') }}</span>
+        </NuxtLink>
+        <NuxtLink to="/contact" class="link-card">
+          <span class="icon">📞</span>
+          <span class="text">{{ t('contact') }}</span>
+        </NuxtLink>
+      </div>
+    </section>
+
+    <!-- Featured Products -->
     <section class="featured container">
-      <h2>Featured Products</h2>
+      <h2>{{ t('featured') }}</h2>
       <div class="product-grid">
-        <div v-for="product in products" :key="product.id" class="product-card">
+        <div v-for="product in productsList" :key="product.id" class="product-card">
           <NuxtLink :to="`/products/${product.id}`">
             <div class="product-image">
-              <img :src="product.image" :alt="product.name">
+              <img :src="getProductImage(product)" :alt="product.name">
             </div>
             <div class="product-info">
               <h3>{{ product.name }}</h3>
@@ -24,25 +48,88 @@
         </div>
       </div>
     </section>
+
+    <!-- User Section (shown when logged in) -->
+    <section v-if="isLoggedIn" class="user-section container">
+      <h2>My Account</h2>
+      <div class="links-grid">
+        <NuxtLink to="/profile" class="link-card">
+          <span class="icon">👤</span>
+          <span class="text">Profile</span>
+        </NuxtLink>
+        <NuxtLink to="/order" class="link-card">
+          <span class="icon">📦</span>
+          <span class="text">My Orders</span>
+        </NuxtLink>
+        <NuxtLink to="/wishlist" class="link-card">
+          <span class="icon">❤️</span>
+          <span class="text">{{ t('wishlist') }}</span>
+        </NuxtLink>
+        <NuxtLink to="/coupons" class="link-card">
+          <span class="icon">🎫</span>
+          <span class="text">{{ t('coupons') }}</span>
+        </NuxtLink>
+      </div>
+    </section>
+
+    <!-- Guest Section (shown when not logged in) -->
+    <section v-if="!isLoggedIn" class="guest-section container">
+      <h2>Account</h2>
+      <div class="links-grid">
+        <NuxtLink to="/auth/login" class="link-card">
+          <span class="icon">🔑</span>
+          <span class="text">{{ t('login') }}</span>
+        </NuxtLink>
+        <NuxtLink to="/auth/register" class="link-card">
+          <span class="icon">📝</span>
+          <span class="text">{{ t('register') }}</span>
+        </NuxtLink>
+      </div>
+    </section>
+
+    <!-- Policies -->
+    <section class="policies container">
+      <div class="policy-links">
+        <NuxtLink to="/policy/privacy">Privacy Policy</NuxtLink>
+        <NuxtLink to="/policy/terms">Terms of Service</NuxtLink>
+        <NuxtLink to="/policy/shipping">Shipping Policy</NuxtLink>
+        <NuxtLink to="/policy/returns">Return Policy</NuxtLink>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+const { getProductImage } = useProductImage()
+const token = useCookie('token')
+const isLoggedIn = computed(() => !!token.value)
+
 interface Product {
   id: number
-  name: string
+  name: number
   price: number
   image: string
 }
 
 const config = useRuntimeConfig()
-const { data: products } = await useFetch<Product[]>('/products', {
-  baseURL: config.public.apiBase,
-  default: () => []
+
+const { data: response } = await useFetch<{ code: number, data: { records: Product[] } }>('/products', {
+  baseURL: config.public.apiBase
+})
+
+const productsList = computed(() => {
+  if (response.value?.data?.records) {
+    return response.value.data.records
+  }
+  return []
 })
 </script>
 
 <style scoped>
+.home {
+  padding-bottom: 40px;
+}
 .hero {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
@@ -69,6 +156,40 @@ const { data: products } = await useFetch<Product[]>('/products', {
 }
 .btn:hover {
   transform: scale(1.05);
+}
+.quick-links, .user-section, .guest-section {
+  padding: 40px 20px;
+}
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #333;
+  transition: all 0.2s;
+}
+.link-card:hover {
+  background: #667eea;
+  color: #fff;
+  transform: translateY(-3px);
+}
+.link-card .icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+.link-card .text {
+  font-size: 14px;
+  font-weight: 500;
 }
 .featured {
   padding: 60px 20px;
@@ -108,5 +229,27 @@ const { data: products } = await useFetch<Product[]>('/products', {
   color: #e74c3c;
   font-size: 18px;
   font-weight: bold;
+}
+.featured h2, .user-section h2, .guest-section h2 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.policies {
+  padding: 40px 20px;
+  text-align: center;
+}
+.policy-links {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+.policy-links a {
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+}
+.policy-links a:hover {
+  color: #667eea;
 }
 </style>

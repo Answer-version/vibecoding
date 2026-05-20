@@ -1,6 +1,7 @@
 export const useApi = () => {
   const config = useRuntimeConfig()
   const token = useCookie('token')
+  const guestId = useCookie('guestId')
 
   const headers = computed(() => ({
     Authorization: token.value ? `Bearer ${token.value}` : '',
@@ -16,12 +17,19 @@ export const useApi = () => {
     })
   }
 
-  async function post<T>(url: string, body?: any) {
+  async function post<T>(url: string, body?: any, extraParams?: Record<string, any>) {
+    // For cart endpoints, add guestId if not logged in
+    let queryParams = extraParams
+    if (!token.value && url.includes('/cart') && guestId.value) {
+      queryParams = { ...extraParams, guestId: guestId.value }
+    }
+
     return useFetch<T>(url, {
       baseURL: config.public.apiBase,
       method: 'POST',
       headers: headers.value,
-      body
+      body,
+      query: queryParams
     })
   }
 
@@ -34,11 +42,12 @@ export const useApi = () => {
     })
   }
 
-  async function del<T>(url: string) {
+  async function del<T>(url: string, params?: Record<string, any>) {
     return useFetch<T>(url, {
       baseURL: config.public.apiBase,
       method: 'DELETE',
-      headers: headers.value
+      headers: headers.value,
+      query: params
     })
   }
 

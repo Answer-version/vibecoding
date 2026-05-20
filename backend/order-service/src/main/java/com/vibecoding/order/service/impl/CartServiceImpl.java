@@ -1,19 +1,17 @@
 package com.vibecoding.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.vibecoding.common.exception.BusinessException;
 import com.vibecoding.order.entity.Cart;
 import com.vibecoding.order.entity.CartItem;
 import com.vibecoding.order.mapper.CartItemMapper;
+import com.vibecoding.order.mapper.CartMapper;
 import com.vibecoding.order.service.CartService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,106 +20,204 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
 
+    private final CartMapper cartMapper;
     private final CartItemMapper cartItemMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
-
-    private Cart getOrCreateCart(Long userId) {
-        // 简化实现：使用 Redis 存储购物车
-        String key = "cart:" + userId;
-        Cart cart = (Cart) redisTemplate.opsForValue().get(key);
-        if (cart == null) {
-            cart = new Cart();
-            cart.setUserId(userId);
-            cart.setCartType(1);
-            cart.setItemCount(0);
-            cart.setUsdAmount(BigDecimal.ZERO);
-            cart.setCreateTime(LocalDateTime.now());
-            cart.setUpdateTime(LocalDateTime.now());
-            redisTemplate.opsForValue().set(key, cart);
-        }
-        return cart;
-    }
 
     @Override
-    public Map<String, Object> getCart() {
-        // 从 Redis 获取
-        Long userId = 1L; // TODO: 从 JWT 获取
-        Cart cart = getOrCreateCart(userId);
+    public Map<String, Object> getCart(Long userId) {
+        validateUserId(userId);
 
-        String itemKey = "cart:items:" + userId;
-        List<CartItem> items = (List<CartItem>) redisTemplate.opsForValue().get(itemKey);
-        if (items == null) {
-            items = new ArrayList<>();
+        Cart cart = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                .eq(Cart::getUserId, userId));
+
+        if (cart == null) {
+            cart = createCart(userId);
         }
 
+        List<CartItem> items = cartItemMapper.selectList(new LambdaQueryWrapper<CartItem>()
+                .eq(CartItem::getCartId, cart.getId())
+                .orderByAsc(CartItem::getId));
+
         Map<String, Object> result = new HashMap<>();
+        result.put("cart", cart);
         result.put("items", items);
         result.put("subtotal", cart.getUsdAmount());
-        result.put("itemCount", cart.getItemCount());
+        result.put("itemCount", items.size());
 
         return result;
     }
 
     @Override
     @Transactional
-    public void addItem(Map<String, Object> params) {
-        Long userId = 1L; // TODO: 从 JWT 获取
-        Long productId = Long.parseLong(params.get("productId").toString());
-        Long skuId = params.get("skuId") != null ? Long.parseLong(params.get("skuId").toString()) : null;
-        Integer quantity = Integer.parseInt(params.get("quantity").toString());
+    public Cart addItem(Long userId, Long productId, Long skuId, Integer quantity,
+                       BigDecimal usdPrice, String productName, String skuCode, String skuAttrs) {
+        validateUserId(userId);
+        validateProductParams(productId, quantity);
 
-        Cart cart = getOrCreateCart(userId);
-        String itemKey = "cart:items:" + userId;
+        Cart cart = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                .eq(Cart::getUserId, userId));
 
-        List<CartItem> items = (List<CartItem>) redisTemplate.opsForValue().get(itemKey);
-        if (items == null) {
-            items = new ArrayList<>();
+        if (cart == null) {
+            cart = createCart(userId);
         }
 
-        // 检查是否已存在
+        CartItem existingItem = cartItemMapper.selectOne(new LambdaQueryWrapper<CartItem>()
+                .eq(CartItem::getCartId, cart.getId())
+                .eq(CartItem::getProductId, productId)
+                .eq(CartItem::getSkuId, skuId));
+
+        if (existingItem != null) {
+            existingItem.setQuantity(existingItem.getQuantity() + quantity);
+            existingItem.setUsdAmount(usdPrice.multiply(BigDecimal.valueOf(existingItem.getQuantity())));
+            existingItem.setUpdateTime(LocalDateTime.now());
+            cartItemMapper.updateById(existingItem);
+        } else {
+            CartItem item = new CartItem();
+            item.setCartId(cart.getId());
+            item.setProductId(productId);
+            item.setSkuId(skuId);
+            item.setSkuCode(skuCode);
+            item.setProductName(productName);
+            item.setSkuAttrs(skuAttrs);
+            item.setQuantity(quantity);
+            item.setUsdPrice(usdPrice);
+            item.setUsdAmount(usdPrice.multiply(BigDecimal.valueOf(quantity)));
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            cartItemMapper.insert(item);
+        }
+
+        updateCartTotals(cart);
+        return cart;
+    }
+
+    @Override
+    @Transactional
+    public Cart updateItem(Long userId, Long itemId, Integer quantity) {
+        validateUserId(userId);
+        validateQuantity(quantity);
+
+        Cart cart = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                .eq(Cart::getUserId, userId));
+
+        if (cart == null) {
+            throw new IllegalArgumentException("Cart not found");
+        }
+
+        CartItem targetItem = cartItemMapper.selectOne(new LambdaQueryWrapper<CartItem>()
+                .eq(CartItem::getId, itemId)
+                .eq(CartItem::getCartId, cart.getId()));
+
+        if (targetItem == null) {
+            throw new IllegalArgumentException("Cart item not found: " + itemId);
+        }
+
+        if (quantity <= 0) {
+            cartItemMapper.deleteById(itemId);
+        } else {
+            targetItem.setQuantity(quantity);
+            targetItem.setUsdAmount(targetItem.getUsdPrice().multiply(BigDecimal.valueOf(quantity)));
+            targetItem.setUpdateTime(LocalDateTime.now());
+            cartItemMapper.updateById(targetItem);
+        }
+
+        updateCartTotals(cart);
+        return cart;
+    }
+
+    @Override
+    @Transactional
+    public Cart removeItem(Long userId, Long itemId) {
+        validateUserId(userId);
+
+        Cart cart = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                .eq(Cart::getUserId, userId));
+
+        if (cart == null) {
+            throw new IllegalArgumentException("Cart not found");
+        }
+
+        CartItem targetItem = cartItemMapper.selectOne(new LambdaQueryWrapper<CartItem>()
+                .eq(CartItem::getId, itemId)
+                .eq(CartItem::getCartId, cart.getId()));
+
+        if (targetItem == null) {
+            throw new IllegalArgumentException("Cart item not found: " + itemId);
+        }
+
+        cartItemMapper.deleteById(itemId);
+        updateCartTotals(cart);
+        return cart;
+    }
+
+    @Override
+    @Transactional
+    public Cart clearCart(Long userId) {
+        validateUserId(userId);
+
+        Cart cart = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                .eq(Cart::getUserId, userId));
+
+        if (cart != null) {
+            cartItemMapper.delete(new LambdaQueryWrapper<CartItem>()
+                    .eq(CartItem::getCartId, cart.getId()));
+
+            cart.setUsdAmount(BigDecimal.ZERO);
+            cart.setItemCount(0);
+            cart.setUpdateTime(LocalDateTime.now());
+            cartMapper.updateById(cart);
+        }
+
+        return null;
+    }
+
+    private Cart createCart(Long userId) {
+        Cart cart = new Cart();
+        cart.setUserId(userId);
+        cart.setCartType(1);
+        cart.setItemCount(0);
+        cart.setUsdAmount(BigDecimal.ZERO);
+        cart.setCreateTime(LocalDateTime.now());
+        cart.setUpdateTime(LocalDateTime.now());
+        cartMapper.insert(cart);
+        return cart;
+    }
+
+    private void updateCartTotals(Cart cart) {
+        List<CartItem> items = cartItemMapper.selectList(new LambdaQueryWrapper<CartItem>()
+                .eq(CartItem::getCartId, cart.getId()));
+
+        BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem item : items) {
-            if (item.getProductId().equals(productId) && (skuId == null || skuId.equals(item.getSkuId()))) {
-                item.setQuantity(item.getQuantity() + quantity);
-                item.setUpdateTime(LocalDateTime.now());
-                redisTemplate.opsForValue().set(itemKey, items);
-                return;
+            if (item.getUsdAmount() != null) {
+                subtotal = subtotal.add(item.getUsdAmount());
             }
         }
 
-        // 添加新项
-        CartItem item = new CartItem();
-        item.setCartId(cart.getId());
-        item.setProductId(productId);
-        item.setSkuId(skuId);
-        item.setQuantity(quantity);
-        item.setUsdPrice(BigDecimal.ZERO);
-        item.setUsdAmount(BigDecimal.ZERO);
-        item.setCreateTime(LocalDateTime.now());
-        item.setUpdateTime(LocalDateTime.now());
-
-        items.add(item);
-        cart.setItemCount(cart.getItemCount() + quantity);
+        cart.setUsdAmount(subtotal);
+        cart.setItemCount(items.size());
         cart.setUpdateTime(LocalDateTime.now());
-
-        redisTemplate.opsForValue().set(itemKey, items);
+        cartMapper.updateById(cart);
     }
 
-    @Override
-    public void updateItem(Long itemId, Map<String, Object> params) {
-        // TODO: 实现
+    private void validateUserId(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
     }
 
-    @Override
-    public void removeItem(Long itemId) {
-        // TODO: 实现
+    private void validateProductParams(Long productId, Integer quantity) {
+        if (productId == null) {
+            throw new IllegalArgumentException("Product ID is required");
+        }
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
     }
 
-    @Override
-    public void clearCart() {
-        Long userId = 1L; // TODO: 从 JWT 获取
-        String key = "cart:" + userId;
-        String itemKey = "cart:items:" + userId;
-        redisTemplate.delete(key);
-        redisTemplate.delete(itemKey);
+    private void validateQuantity(Integer quantity) {
+        if (quantity == null) {
+            throw new IllegalArgumentException("Quantity is required");
+        }
     }
 }

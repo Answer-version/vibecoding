@@ -17,7 +17,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl extends BaseService<UserMapper, User> implements UserService {
 
+    private final UserMapper userMapper;
     private final UserAddressMapper userAddressMapper;
+
+    @Override
+    public User getById(Long id) {
+        return userMapper.selectById(id);
+    }
+
+    @Override
+    public boolean save(User user) {
+        return userMapper.insert(user) > 0;
+    }
+
+    @Override
+    public boolean updateById(User user) {
+        return userMapper.updateById(user) > 0;
+    }
+
+    @Override
+    public boolean removeById(Long id) {
+        return userMapper.deleteById(id) > 0;
+    }
 
     @Override
     public List<UserAddress> listAddresses(Long userId) {

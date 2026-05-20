@@ -5,9 +5,10 @@ import com.vibecoding.common.exception.BusinessException;
 import com.vibecoding.order.entity.Order;
 import com.vibecoding.order.entity.Payment;
 import com.vibecoding.order.mapper.PaymentMapper;
-import com.vibecoding.order.pay.AlipayGateway;
-import com.vibecoding.order.pay.PayPalGateway;
-import com.vibecoding.order.pay.PaymentGateway;
+import com.vibecoding.order.gateway.AlipayGateway;
+import com.vibecoding.order.gateway.PayPalGateway;
+import com.vibecoding.order.gateway.PaymentGateway;
+import com.vibecoding.order.gateway.WechatPayGateway;
 import com.vibecoding.order.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +29,12 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
     private final AlipayGateway alipayGateway;
     private final PayPalGateway payPalGateway;
+    private final WechatPayGateway wechatPayGateway;
 
     private static final Map<String, String> CHANNEL_MAP = Map.of(
             "ALIPAY", "alipay",
             "PAYPAL", "paypal",
+            "WECHAT", "wechat",
             "CREDIT_CARD", "stripe"
     );
 
@@ -72,7 +75,7 @@ public class PaymentServiceImpl implements PaymentService {
         paymentMapper.insert(payment);
 
         // 调用支付网关创建支付
-        Map<String, Object> gatewayPayment = gateway.createPayment(
+        String gatewayPaymentId = gateway.createPayment(
                 orderId,
                 order.getOrderNo(),
                 order.getTotalAmount(),
@@ -80,14 +83,12 @@ public class PaymentServiceImpl implements PaymentService {
                 returnUrl
         );
 
-        // 更新支付记录
-        payment.setChannelOrderNo((String) gatewayPayment.get("paymentNo"));
-        payment.setPayUrl((String) gatewayPayment.get("payUrl"));
+        payment.setChannelOrderNo(gatewayPaymentId);
         paymentMapper.updateById(payment);
 
         Map<String, Object> result = new HashMap<>();
         result.put("paymentNo", paymentNo);
-        result.put("payUrl", gatewayPayment.get("payUrl"));
+        result.put("payUrl", returnUrl + "?paymentNo=" + gatewayPaymentId);
         result.put("amount", order.getTotalAmount());
 
         return result;
@@ -158,6 +159,7 @@ public class PaymentServiceImpl implements PaymentService {
         return switch (payMethod.toUpperCase()) {
             case "ALIPAY" -> alipayGateway;
             case "PAYPAL" -> payPalGateway;
+            case "WECHAT", "WECHAT_PAY" -> wechatPayGateway;
             default -> null;
         };
     }
