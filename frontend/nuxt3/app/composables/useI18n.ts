@@ -1,6 +1,6 @@
 // 简单的国际化解决方案
 export const useI18n = () => {
-  const locale = useCookie('locale', { default: () => 'en' })
+  const locale = useCookie('locale')
 
   const messages: Record<string, Record<string, string>> = {
     en: {
