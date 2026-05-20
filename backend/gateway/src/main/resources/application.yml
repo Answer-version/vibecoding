@@ -40,6 +40,14 @@ spring:
           uri: http://localhost:8082
           predicates:
             - Path=/api/v1/payments/**
+        - id: wishlist-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/wishlist/**
+        - id: review-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/reviews/**
 
 jwt:
   secret: ${JWT_SECRET:vibecoding-secret-key-must-be-at-least-256-bits-long}

@@ -50,9 +50,45 @@
           Add to Cart
         </button>
 
+        <button class="btn-wishlist" @click="toggleWishlist" :class="{ active: isWishlisted }">
+          {{ isWishlisted ? '♥ Saved' : '♡ Add to Wishlist' }}
+        </button>
+
         <div class="product-meta" v-if="product.brandId || product.categoryId">
           <span v-if="product.brandId">Brand ID: {{ product.brandId }}</span>
           <span v-if="product.categoryId">Category ID: {{ product.categoryId }}</span>
+        </div>
+
+        <!-- Reviews -->
+        <div class="review-section">
+          <h3>Reviews ({{ reviewStats.totalCount || 0 }})</h3>
+          <div v-if="reviewStats.avgRating" class="rating-summary">
+            <span class="rating-num">{{ reviewStats.avgRating?.toFixed(1) }}</span>
+            <span class="stars">{{ '★'.repeat(Math.round(reviewStats.avgRating || 0)) }}</span>
+          </div>
+          <p v-if="!reviewStats.totalCount" class="no-reviews">No reviews yet</p>
+          <button v-if="isLoggedIn" class="btn-write-review" @click="showReviewForm = !showReviewForm">
+            {{ showReviewForm ? 'Cancel' : 'Write Review' }}
+          </button>
+          <div v-if="showReviewForm" class="review-form">
+            <select v-model="newReview.rating">
+              <option :value="5">5 - Excellent</option>
+              <option :value="4">4 - Good</option>
+              <option :value="3">3 - Average</option>
+              <option :value="2">2 - Poor</option>
+              <option :value="1">1 - Terrible</option>
+            </select>
+            <input v-model="newReview.title" placeholder="Title (optional)" />
+            <textarea v-model="newReview.content" placeholder="Your review..." rows="3"></textarea>
+            <button @click="submitReview">Submit</button>
+          </div>
+          <div class="review-list">
+            <div v-for="r in reviews" :key="r.id" class="review-item">
+              <span class="stars">{{ '★'.repeat(r.rating) }}</span>
+              <p v-if="r.title" class="title">{{ r.title }}</p>
+              <p class="content">{{ r.content }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -64,8 +100,26 @@ const route = useRoute()
 const productId = route.params.id as string
 const { getProductImage } = useProductImage()
 const { addItem } = useCart()
+const { check: checkWishlist, toggle: toggleWishlistItem } = useWishlist()
+const { list: listReviews, stats: getReviewStats, add: addReview } = useReview()
+const token = useCookie('token')
 
 const config = useRuntimeConfig()
+
+const isWishlisted = ref(false)
+const reviews = ref<any[]>([])
+const reviewStats = ref<any>({})
+const showReviewForm = ref(false)
+const hasReviewed = ref(false)
+const newReview = ref({ rating: 5, title: '', content: '', isAnonymous: false })
+const isLoggedIn = computed(() => !!token.value)
+
+// 检查是否已收藏
+onMounted(async () => {
+  if (token.value && product.value?.id) {
+    isWishlisted.value = await checkWishlist(product.value.id)
+  }
+})
 
 const { data: productData, pending, error, refresh } = await useFetch(`/products/${productId}`, {
   baseURL: config.public.apiBase,
@@ -104,6 +158,43 @@ async function addToCart() {
     alert('Failed to add to cart')
   }
 }
+
+async function toggleWishlist() {
+  if (!token.value) {
+    navigateTo('/auth/login')
+    return
+  }
+  isWishlisted.value = await toggleWishlistItem(productId as unknown as number)
+}
+
+async function loadReviews() {
+  if (!productId) return
+  try {
+    const pid = parseInt(productId)
+    reviews.value = await listReviews(pid)
+    reviewStats.value = await getReviewStats(pid)
+  } catch (e) {
+    console.error('Failed to load reviews', e)
+  }
+}
+
+async function submitReview() {
+  if (!newReview.value.content || !token.value) return
+  try {
+    await addReview(parseInt(productId), newReview.value.rating, newReview.value.content, {
+      title: newReview.value.title,
+      isAnonymous: newReview.value.isAnonymous
+    })
+    showReviewForm.value = false
+    newReview.value = { rating: 5, title: '', content: '', isAnonymous: false }
+    await loadReviews()
+  } catch (e) {
+    alert('Failed to submit review')
+  }
+}
+
+// Load reviews on mount
+onMounted(loadReviews)
 </script>
 
 <style scoped>
@@ -228,6 +319,25 @@ async function addToCart() {
   background: #ccc;
   cursor: not-allowed;
 }
+.btn-wishlist {
+  margin-top: 10px;
+  width: 100%;
+  padding: 15px;
+  background: #fff;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-wishlist:hover {
+  background: #f8f9ff;
+}
+.btn-wishlist.active {
+  background: #667eea;
+  color: #fff;
+}
 .product-meta {
   margin-top: 30px;
   padding-top: 20px;
@@ -237,5 +347,74 @@ async function addToCart() {
 }
 .product-meta span {
   margin-right: 20px;
+}
+.review-section {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid #eee;
+}
+.review-section h3 {
+  margin-bottom: 20px;
+}
+.rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.rating-num {
+  font-size: 24px;
+  font-weight: bold;
+}
+.stars {
+  color: #f39c12;
+  font-size: 18px;
+}
+.no-reviews {
+  color: #999;
+  margin-bottom: 15px;
+}
+.btn-write-review {
+  padding: 10px 20px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.review-form select, .review-form input, .review-form textarea {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+.review-form button {
+  padding: 10px 20px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.review-list {
+  margin-top: 20px;
+}
+.review-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+.review-item .title {
+  font-weight: bold;
+  margin: 5px 0;
+}
+.review-item .content {
+  color: #666;
+  margin-top: 5px;
 }
 </style>

@@ -280,6 +280,37 @@ CREATE TABLE IF NOT EXISTS order_coupon (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 用户收藏/心愿单表
+CREATE TABLE IF NOT EXISTS wishlist (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    note VARCHAR(500) COMMENT '备注',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    UNIQUE(user_id, product_id)
+);
+
+-- 产品评价表
+CREATE TABLE IF NOT EXISTS review (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    order_id BIGINT,
+    rating TINYINT NOT NULL COMMENT '评分1-5',
+    title VARCHAR(200),
+    content TEXT COMMENT '评价内容',
+    images VARCHAR(1000) COMMENT '图片,分隔',
+    is_anonymous TINYINT DEFAULT 0 COMMENT '是否匿名',
+    status TINYINT DEFAULT 1 COMMENT '1:显示 0:隐藏',
+    reply_content VARCHAR(500),
+    reply_time DATETIME,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0
+);
+
 -- 插入初始测试数据
 INSERT INTO category (id, parent_id, level, name, name_en, sort_order, status) VALUES
 (1, 0, 1, 'Electronics', 'Electronics', 1, 1),

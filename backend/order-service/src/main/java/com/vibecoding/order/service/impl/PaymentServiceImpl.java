@@ -8,6 +8,7 @@ import com.vibecoding.order.mapper.PaymentMapper;
 import com.vibecoding.order.gateway.AlipayGateway;
 import com.vibecoding.order.gateway.PayPalGateway;
 import com.vibecoding.order.gateway.PaymentGateway;
+import com.vibecoding.order.gateway.WechatPayGateway;
 import com.vibecoding.order.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +29,12 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
     private final AlipayGateway alipayGateway;
     private final PayPalGateway payPalGateway;
+    private final WechatPayGateway wechatPayGateway;
 
     private static final Map<String, String> CHANNEL_MAP = Map.of(
             "ALIPAY", "alipay",
             "PAYPAL", "paypal",
+            "WECHAT", "wechat",
             "CREDIT_CARD", "stripe"
     );
 
@@ -156,6 +159,7 @@ public class PaymentServiceImpl implements PaymentService {
         return switch (payMethod.toUpperCase()) {
             case "ALIPAY" -> alipayGateway;
             case "PAYPAL" -> payPalGateway;
+            case "WECHAT", "WECHAT_PAY" -> wechatPayGateway;
             default -> null;
         };
     }

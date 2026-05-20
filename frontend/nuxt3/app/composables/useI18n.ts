@@ -6,7 +6,9 @@ export const useI18n = () => {
     en: {
       home: 'Home',
       products: 'Products',
+      wishlist: 'Wishlist',
       about: 'About',
+      contact: 'Contact',
       cart: 'Cart',
       coupons: 'Coupons',
       login: 'Login',
@@ -43,6 +45,7 @@ export const useI18n = () => {
     zh: {
       home: '首页',
       products: '产品',
+      wishlist: '心愿单',
       about: '关于',
       cart: '购物车',
       coupons: '优惠券',

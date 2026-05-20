@@ -244,7 +244,8 @@ function removeCoupon() {
 const paymentMethods = ref<PaymentMethod[]>([
   { id: 'paypal', name: 'PayPal', icon: 'P' },
   { id: 'alipay', name: 'Alipay', icon: 'A' },
-  { id: 'stripe', name: 'Credit Card', icon: 'C' }
+  { id: 'wechat', name: 'WeChat Pay', icon: 'W' },
+  { id: 'credit_card', name: 'Credit Card', icon: 'C' }
 ])
 
 const subtotal = computed(() => {

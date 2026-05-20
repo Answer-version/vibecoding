@@ -9,12 +9,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/payments")
+@RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
 public class PaymentController {
 
     private final PaymentService paymentService;
 
+    /**
+     * 创建支付订单
+     */
     @PostMapping("/create")
     public R<Map<String, Object>> create(
             @RequestBody Map<String, Object> params,
@@ -27,6 +30,9 @@ public class PaymentController {
         return R.ok(paymentService.createPayment(orderId, payMethod, returnUrl));
     }
 
+    /**
+     * 支付回调通知
+     */
     @PostMapping("/notify/{payMethod}")
     public String notify(
             @PathVariable String payMethod,
@@ -36,8 +42,23 @@ public class PaymentController {
         return "success";
     }
 
+    /**
+     * 获取支付信息
+     */
     @GetMapping("/{orderId}")
     public R<Map<String, Object>> getPaymentInfo(@PathVariable Long orderId) {
         return R.ok(paymentService.getPaymentInfo(orderId));
+    }
+
+    /**
+     * 获取支持的支付方式列表
+     */
+    @GetMapping("/methods")
+    public R<Map<String, String>> getPaymentMethods() {
+        return R.ok(Map.of(
+            "paypal", "PayPal",
+            "alipay", "Alipay",
+            "wechat", "WeChat Pay"
+        ));
     }
 }

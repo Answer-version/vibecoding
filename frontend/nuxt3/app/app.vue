@@ -3,9 +3,12 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <CookieConsent />
+    <PromoPopup />
   </div>
 </template>
 
 <script setup lang="ts">
-// 使用app目录结构
+import CookieConsent from '~/components/CookieConsent.vue'
+import PromoPopup from '~/components/PromoPopup.vue'
 </script>

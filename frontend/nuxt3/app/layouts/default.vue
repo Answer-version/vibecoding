@@ -7,9 +7,13 @@
           <nav class="nav">
             <NuxtLink to="/">{{ t('home') }}</NuxtLink>
             <NuxtLink to="/products">{{ t('products') }}</NuxtLink>
+            <NuxtLink to="/about">About</NuxtLink>
+            <NuxtLink to="/contact">Contact</NuxtLink>
             <NuxtLink v-if="isLoggedIn" to="/coupons">{{ t('coupons') }}</NuxtLink>
+            <NuxtLink v-if="isLoggedIn" to="/wishlist">{{ t('wishlist') }}</NuxtLink>
           </nav>
           <div class="header-right">
+            <CurrencySelector />
             <select v-model="currentLocale" @change="changeLocale">
               <option value="en">EN</option>
               <option value="zh">中文</option>
@@ -38,6 +42,7 @@
 
 <script setup lang="ts">
 const { locale, t, setLocale } = useI18n()
+import CurrencySelector from '~/components/CurrencySelector.vue'
 const token = useCookie('token')
 const isLoggedIn = computed(() => !!token.value)
 
