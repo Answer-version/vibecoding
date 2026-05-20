@@ -1,6 +1,6 @@
 // 简单的国际化解决方案
 export const useI18n = () => {
-  const locale = useCookie('locale', { default: () => 'zh' })
+  const locale = useCookie('locale', { default: () => 'en' })
 
   const messages: Record<string, Record<string, string>> = {
     en: {
@@ -8,6 +8,7 @@ export const useI18n = () => {
       products: 'Products',
       about: 'About',
       cart: 'Cart',
+      coupons: 'Coupons',
       login: 'Login',
       logout: 'Logout',
       welcome: 'Welcome to VibeCommerce',
@@ -44,6 +45,7 @@ export const useI18n = () => {
       products: '产品',
       about: '关于',
       cart: '购物车',
+      coupons: '优惠券',
       login: '登录',
       logout: '退出',
       welcome: '欢迎来到VibeCommerce',

@@ -7,6 +7,7 @@
           <nav class="nav">
             <NuxtLink to="/">{{ t('home') }}</NuxtLink>
             <NuxtLink to="/products">{{ t('products') }}</NuxtLink>
+            <NuxtLink v-if="isLoggedIn" to="/coupons">{{ t('coupons') }}</NuxtLink>
           </nav>
           <div class="header-right">
             <select v-model="currentLocale" @change="changeLocale">

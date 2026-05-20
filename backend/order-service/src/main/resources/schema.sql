@@ -239,6 +239,47 @@ CREATE TABLE IF NOT EXISTS payment (
     deleted TINYINT DEFAULT 0
 );
 
+-- 优惠券表
+CREATE TABLE IF NOT EXISTS coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    coupon_code VARCHAR(50) NOT NULL UNIQUE COMMENT '优惠码',
+    name VARCHAR(100) NOT NULL COMMENT '优惠券名称',
+    name_en VARCHAR(100) COMMENT '英文名称',
+    type TINYINT NOT NULL COMMENT '1:满减 2:折扣 3:免运费',
+    discount_value DECIMAL(10,2) NOT NULL COMMENT '优惠金额/折扣率(0-1)',
+    min_amount DECIMAL(10,2) DEFAULT 0 COMMENT '最低消费金额',
+    total_quantity INT NOT NULL COMMENT '总发行量',
+    used_quantity INT DEFAULT 0 COMMENT '已使用数量',
+    start_time DATETIME NOT NULL COMMENT '生效时间',
+    end_time DATETIME NOT NULL COMMENT '过期时间',
+    status TINYINT DEFAULT 1 COMMENT '1:启用 0:禁用',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户优惠券表
+CREATE TABLE IF NOT EXISTS user_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    coupon_id BIGINT NOT NULL,
+    status TINYINT DEFAULT 0 COMMENT '0:未使用 1:已使用 2:已过期',
+    get_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    use_time DATETIME,
+    order_id BIGINT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 订单优惠券关联表
+CREATE TABLE IF NOT EXISTS order_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL UNIQUE,
+    coupon_id BIGINT NOT NULL,
+    coupon_code VARCHAR(50) NOT NULL,
+    discount_amount DECIMAL(10,2) NOT NULL COMMENT '实际优惠金额',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 插入初始测试数据
 INSERT INTO category (id, parent_id, level, name, name_en, sort_order, status) VALUES
 (1, 0, 1, 'Electronics', 'Electronics', 1, 1),
@@ -258,3 +299,10 @@ INSERT INTO product (id, product_code, name, name_en, brand_id, category_id, pri
 INSERT INTO cms_article (id, title, title_en, slug, summary, summary_en, content, category_id, status) VALUES
 (1, 'Welcome to VibeCommerce', 'Welcome to VibeCommerce', 'welcome', 'Welcome to our store', 'Welcome to our store', 'This is our official store.', 1, 1),
 (2, 'Shipping Info', 'Shipping Info', 'shipping', 'Shipping information', 'Shipping information', 'Free shipping on orders over $50.', 1, 1);
+
+-- 插入优惠券测试数据
+INSERT INTO coupon (id, coupon_code, name, name_en, type, discount_value, min_amount, total_quantity, used_quantity, start_time, end_time, status) VALUES
+(1, 'SAVE10', 'Save $10', 'Save $10', 1, 10.00, 50.00, 100, 0, '2025-01-01 00:00:00', '2027-12-31 23:59:59', 1),
+(2, 'SAVE20', 'Save $20', 'Save $20', 1, 20.00, 100.00, 50, 0, '2025-01-01 00:00:00', '2027-12-31 23:59:59', 1),
+(3, 'DISCOUNT15', '15% Off', '15% Off', 2, 0.15, 100.00, 30, 0, '2025-01-01 00:00:00', '2027-12-31 23:59:59', 1),
+(4, 'FREESHIP', 'Free Shipping', 'Free Shipping', 3, 9.99, 30.00, 200, 0, '2025-01-01 00:00:00', '2027-12-31 23:59:59', 1);

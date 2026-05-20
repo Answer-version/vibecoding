@@ -82,6 +82,26 @@
             </div>
           </div>
         </section>
+
+        <section class="coupon-section">
+          <h2>Coupon Code</h2>
+          <div class="coupon-input">
+            <input
+              v-model="couponCode"
+              placeholder="Enter coupon code"
+              :disabled="appliedCoupon"
+            />
+            <button @click="applyCoupon" :disabled="!couponCode || appliedCoupon">
+              {{ appliedCoupon ? 'Applied' : 'Apply' }}
+            </button>
+            <button v-if="appliedCoupon" @click="removeCoupon" class="btn-remove-coupon">
+              Remove
+            </button>
+          </div>
+          <div v-if="couponMessage" :class="['coupon-message', couponValid ? 'success' : 'error']">
+            {{ couponMessage }}
+          </div>
+        </section>
       </div>
 
       <div class="order-summary">
@@ -90,9 +110,13 @@
           <span>Subtotal:</span>
           <span>${{ subtotal.toFixed(2) }}</span>
         </div>
+        <div class="summary-row" v-if="appliedCoupon">
+          <span>Discount:</span>
+          <span>-${{ discountAmount.toFixed(2) }}</span>
+        </div>
         <div class="summary-row">
           <span>Shipping:</span>
-          <span>${{ shipping.toFixed(2) }}</span>
+          <span>${{ effectiveShipping.toFixed(2) }}</span>
         </div>
         <div class="summary-row">
           <span>Tax:</span>
@@ -158,6 +182,65 @@ const newAddress = ref({
 
 const isLoggedIn = computed(() => !!token.value)
 
+// 优惠券相关状态
+const couponCode = ref('')
+const appliedCoupon = ref<any>(null)
+const couponMessage = ref('')
+const couponValid = ref(false)
+const discountAmount = ref(0)
+const userCouponId = ref<number | null>(null)
+
+// 计算实际运费（考虑免运费券）
+const effectiveShipping = computed(() => {
+  if (appliedCoupon.value?.couponType === 3) { // 免运费
+    return 0
+  }
+  return shipping.value
+})
+
+// 计算总价（考虑优惠）
+const total = computed(() => {
+  let totalWithoutCoupon = subtotal.value + effectiveShipping.value + tax.value
+  return Math.max(0, totalWithoutCoupon - discountAmount.value)
+})
+
+// 应用优惠券
+async function applyCoupon() {
+  if (!couponCode.value) return
+
+  try {
+    const res = await post<any>('/coupons/validate', null, {
+      couponCode: couponCode.value,
+      totalAmount: subtotal.value
+    })
+
+    if (res.data.value?.code === 0 && res.data.value.data?.valid) {
+      const data = res.data.value.data
+      appliedCoupon.value = data
+      couponValid.value = true
+      couponMessage.value = `Coupon applied: -$${data.discountAmount?.toFixed(2)}`
+      discountAmount.value = data.discountAmount || 0
+      userCouponId.value = data.couponId
+    } else {
+      couponValid.value = false
+      couponMessage.value = res.data.value?.data?.message || 'Invalid coupon'
+      discountAmount.value = 0
+    }
+  } catch (e: any) {
+    couponValid.value = false
+    couponMessage.value = e.message || 'Failed to apply coupon'
+  }
+}
+
+// 移除优惠券
+function removeCoupon() {
+  appliedCoupon.value = null
+  couponCode.value = ''
+  couponMessage.value = ''
+  discountAmount.value = 0
+  userCouponId.value = null
+}
+
 const paymentMethods = ref<PaymentMethod[]>([
   { id: 'paypal', name: 'PayPal', icon: 'P' },
   { id: 'alipay', name: 'Alipay', icon: 'A' },
@@ -174,8 +257,6 @@ const tax = computed(() => subtotal.value * 0.08)
 const canPlaceOrder = computed(() =>
   isLoggedIn.value && selectedAddressId.value !== null && items.value.length > 0
 )
-
-const total = computed(() => subtotal.value + shipping.value + tax.value)
 
 async function loadData() {
   pending.value = true
@@ -219,10 +300,14 @@ async function placeOrder() {
   try {
     const res = await post('/orders/checkout', {
       addressId: selectedAddressId.value,
-      payMethod: selectedPayment.value
+      payMethod: selectedPayment.value,
+      couponCode: appliedCoupon.value?.couponCode || null,
+      userCouponId: userCouponId.value,
+      discountAmount: discountAmount.value
     })
 
     if (res.data.value?.code === 0) {
+      removeCoupon() // Clear coupon after successful order
       navigateTo(`/order/success?orderId=${res.data.value.data.orderId}`)
     } else {
       alert(res.data.value?.message || 'Failed to place order')
@@ -384,5 +469,47 @@ h2 {
   color: #fff;
   text-decoration: none;
   border-radius: 25px;
+}
+.coupon-section {
+  margin-top: 20px;
+}
+.coupon-input {
+  display: flex;
+  gap: 10px;
+}
+.coupon-input input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+.coupon-input button {
+  padding: 12px 20px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.coupon-input button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.btn-remove-coupon {
+  background: #e74c3c !important;
+}
+.coupon-message {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.coupon-message.success {
+  background: #d4edda;
+  color: #155724;
+}
+.coupon-message.error {
+  background: #f8d7da;
+  color: #721c24;
 }
 </style>
