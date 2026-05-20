@@ -1,0 +1,9 @@
+{
+  "pid": 83932,
+  "startedAt": 1779269165308,
+  "command": "dev",
+  "cwd": "/Users/answer/dev/code/vibecoding/vibecoding-site/frontend/nuxt3",
+  "port": 3000,
+  "hostname": "::1",
+  "url": "http://[::1]:3000"
+}
