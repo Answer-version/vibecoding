@@ -64,7 +64,7 @@
           <h3>Reviews ({{ reviewStats.totalCount || 0 }})</h3>
           <div v-if="reviewStats.avgRating" class="rating-summary">
             <span class="rating-num">{{ reviewStats.avgRating?.toFixed(1) }}</span>
-            <span class="stars">{{ '★'.repeat(Math.round(reviewStats.avgRating || 0)) }}</span>
+            <span class="stars">/5</span>
           </div>
           <p v-if="!reviewStats.totalCount" class="no-reviews">No reviews yet</p>
           <button v-if="isLoggedIn" class="btn-write-review" @click="showReviewForm = !showReviewForm">
@@ -84,7 +84,7 @@
           </div>
           <div class="review-list">
             <div v-for="r in reviews" :key="r.id" class="review-item">
-              <span class="stars">{{ '★'.repeat(r.rating) }}</span>
+              <span class="stars">{{ r.rating }}/5</span>
               <p v-if="r.title" class="title">{{ r.title }}</p>
               <p class="content">{{ r.content }}</p>
             </div>
