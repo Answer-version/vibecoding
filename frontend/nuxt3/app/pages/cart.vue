@@ -25,6 +25,7 @@
         <div v-for="item in items" :key="item.id" class="cart-item">
           <div class="item-checkbox">
             <input type="checkbox" :value="item.id" v-model="selectedItems" />
+          </div>
           <div class="item-image">
             <img :src="getProductImage(item)" :alt="item.productName">
           </div>
