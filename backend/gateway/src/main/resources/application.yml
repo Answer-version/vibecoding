@@ -14,12 +14,20 @@ spring:
       discovery:
         enabled: false
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: false
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       routes:
         - id: product-service
           uri: http://localhost:8081
           predicates:
             - Path=/api/v1/products/**
-          # No StripPrefix - product service already has /api/v1 in its @RequestMapping
         - id: product-service-categories
           uri: http://localhost:8081
           predicates:
