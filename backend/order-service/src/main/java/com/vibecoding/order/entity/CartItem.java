@@ -15,6 +15,9 @@ public class CartItem {
     private Long cartId;
     private Long productId;
     private Long skuId;
+    private String skuCode;
+    private String productName;
+    private String skuAttrs;
     private Integer quantity;
     private BigDecimal usdPrice;
     private BigDecimal usdAmount;
@@ -34,6 +37,12 @@ public class CartItem {
     public void setProductId(Long productId) { this.productId = productId; }
     public Long getSkuId() { return skuId; }
     public void setSkuId(Long skuId) { this.skuId = skuId; }
+    public String getSkuCode() { return skuCode; }
+    public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+    public String getSkuAttrs() { return skuAttrs; }
+    public void setSkuAttrs(String skuAttrs) { this.skuAttrs = skuAttrs; }
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public BigDecimal getUsdPrice() { return usdPrice; }

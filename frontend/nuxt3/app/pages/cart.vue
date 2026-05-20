@@ -2,7 +2,9 @@
   <div class="cart-page container">
     <h1>Shopping Cart</h1>
 
-    <div v-if="items.length === 0" class="empty-cart">
+    <div v-if="pending" class="loading">Loading cart...</div>
+
+    <div v-else-if="!items || items.length === 0" class="empty-cart">
       <p>Your cart is empty</p>
       <NuxtLink to="/products" class="btn">Continue Shopping</NuxtLink>
     </div>
@@ -11,27 +13,27 @@
       <div class="cart-items">
         <div v-for="item in items" :key="item.id" class="cart-item">
           <div class="item-image">
-            <img :src="item.image" :alt="item.name">
+            <img :src="getProductImage(item)" :alt="item.productName">
           </div>
           <div class="item-info">
-            <h3>{{ item.name }}</h3>
-            <p class="sku" v-if="item.skuName">{{ item.skuName }}</p>
+            <h3>{{ item.productName || 'Product' }}</h3>
+            <p class="sku" v-if="item.skuCode">{{ item.skuCode }}</p>
+            <p class="price">${{ item.usdPrice?.toFixed(2) }}</p>
           </div>
-          <div class="item-price">${{ item.price }}</div>
           <div class="item-quantity">
-            <button @click="updateQty(item.id, item.quantity - 1)">-</button>
+            <button @click="handleUpdateQty(item.id, item.quantity - 1)">-</button>
             <span>{{ item.quantity }}</span>
-            <button @click="updateQty(item.id, item.quantity + 1)">+</button>
+            <button @click="handleUpdateQty(item.id, item.quantity + 1)">+</button>
           </div>
-          <div class="item-total">${{ (item.price * item.quantity).toFixed(2) }}</div>
-          <button class="btn-remove" @click="remove(item.id)">×</button>
+          <div class="item-total">${{ item.usdAmount?.toFixed(2) }}</div>
+          <button class="btn-remove" @click="handleRemove(item.id)">×</button>
         </div>
       </div>
 
       <div class="cart-summary">
         <div class="summary-row">
           <span>Subtotal:</span>
-          <span>${{ subtotal.toFixed(2) }}</span>
+          <span>${{ subtotal?.toFixed(2) || '0.00' }}</span>
         </div>
         <div class="summary-row">
           <span>Shipping:</span>
@@ -39,58 +41,72 @@
         </div>
         <div class="summary-row total">
           <span>Total:</span>
-          <span>${{ (subtotal + shipping).toFixed(2) }}</span>
+          <span>${{ (subtotal + shipping)?.toFixed(2) || '0.00' }}</span>
         </div>
-        <button class="btn-checkout" @click="checkout">Proceed to Checkout</button>
+        <button class="btn-checkout" @click="checkout">
+          Proceed to Checkout
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-interface CartItem {
-  id: number
-  productId: number
-  skuId: number
-  name: string
-  skuName: string
-  image: string
-  price: number
-  quantity: number
-}
+const { getProductImage } = useProductImage()
+const { cart, loadCart, updateItem, removeItem } = useCart()
 
-const { get, post, del } = useApi()
-const items = ref<CartItem[]>([])
+const pending = ref(true)
+const items = ref<any[]>([])
 const subtotal = ref(0)
-const shipping = ref(0)
+const shipping = ref(9.99)
 
-const { data: cartData } = await get<any>('/cart')
-if (cartData.value?.data) {
-  items.value = cartData.value.data.items || []
-  subtotal.value = cartData.value.data.subtotal || 0
+async function load() {
+  pending.value = true
+  try {
+    const data = await loadCart()
+    if (data) {
+      items.value = data.items || []
+      subtotal.value = data.subtotal || 0
+    }
+  } catch (e) {
+    console.error('Failed to load cart', e)
+    items.value = []
+  } finally {
+    pending.value = false
+  }
 }
 
-async function updateQty(itemId: number, quantity: number) {
+async function handleUpdateQty(itemId: number, quantity: number) {
   if (quantity < 1) return
-  await post(`/cart/items/${itemId}`, { quantity })
-  refreshNuxtData()
+  try {
+    await updateItem(itemId, quantity)
+    await load()
+  } catch (e) {
+    alert('Failed to update quantity')
+  }
 }
 
-async function remove(itemId: number) {
-  await del(`/cart/items/${itemId}`)
-  refreshNuxtData()
+async function handleRemove(itemId: number) {
+  try {
+    await removeItem(itemId)
+    await load()
+  } catch (e) {
+    alert('Failed to remove item')
+  }
 }
 
 function checkout() {
   navigateTo('/checkout')
 }
+
+await load()
 </script>
 
 <style scoped>
 .cart-page {
   padding: 40px 20px;
 }
-.empty-cart {
+.loading, .empty-cart {
   text-align: center;
   padding: 80px 0;
 }
@@ -106,7 +122,7 @@ function checkout() {
 }
 .cart-item {
   display: grid;
-  grid-template-columns: 80px 1fr 100px 120px 80px 40px;
+  grid-template-columns: 80px 1fr 120px 100px 40px;
   gap: 20px;
   align-items: center;
   padding: 20px 0;
@@ -117,6 +133,7 @@ function checkout() {
   height: 80px;
   object-fit: cover;
   border-radius: 5px;
+  background: #f5f5f5;
 }
 .item-info h3 {
   font-size: 16px;
@@ -126,8 +143,7 @@ function checkout() {
   color: #666;
   font-size: 14px;
 }
-.item-price,
-.item-total {
+.item-price, .item-total {
   font-weight: bold;
 }
 .item-quantity {
@@ -176,6 +192,9 @@ function checkout() {
   font-size: 16px;
   cursor: pointer;
   margin-top: 20px;
+}
+.btn-checkout:hover {
+  background: #5568d3;
 }
 .btn {
   display: inline-block;

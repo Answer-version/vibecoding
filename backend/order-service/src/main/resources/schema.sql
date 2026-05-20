@@ -135,10 +135,14 @@ CREATE TABLE IF NOT EXISTS product_sku (
 -- 购物车
 CREATE TABLE IF NOT EXISTS cart (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT,
+    session_id VARCHAR(100),
     cart_type TINYINT DEFAULT 1,
     item_count INT DEFAULT 0,
     usd_amount DECIMAL(18,2) DEFAULT 0,
+    eur_amount DECIMAL(18,2) DEFAULT 0,
+    gbp_amount DECIMAL(18,2) DEFAULT 0,
+    cny_amount DECIMAL(18,2) DEFAULT 0,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted TINYINT DEFAULT 0
@@ -150,6 +154,9 @@ CREATE TABLE IF NOT EXISTS cart_item (
     cart_id BIGINT NOT NULL,
     product_id BIGINT NOT NULL,
     sku_id BIGINT,
+    sku_code VARCHAR(50),
+    product_name VARCHAR(200),
+    sku_attrs VARCHAR(500),
     quantity INT DEFAULT 1,
     usd_price DECIMAL(18,2) DEFAULT 0,
     usd_amount DECIMAL(18,2) DEFAULT 0,

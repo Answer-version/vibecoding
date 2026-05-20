@@ -8,7 +8,6 @@ import com.vibecoding.product.entity.Product;
 import com.vibecoding.product.mapper.ProductMapper;
 import com.vibecoding.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -45,7 +44,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Cacheable(value = "product:skus", key = "#productId")
     public List<Object> getSkusByProductId(Long productId) {
         // TODO: 实现获取SKU列表
         return new ArrayList<>();
